@@ -5,6 +5,7 @@ import random
 
 from bigrams import BIGRAM_BAG
 from text_processing import count_tracked_bigrams, counts_to_vector
+from dataset_loader import SentenceDataset
 
 
 class TypingEnv:
@@ -26,6 +27,9 @@ class TypingEnv:
         
         # timers (time since last practice)
         self.t = np.zeros(self.K)
+        
+        # dataset
+        self.dataset = SentenceDataset("typing_dataset.csv")
 
     # reset environment to initial state
     def reset(self):
@@ -48,15 +52,25 @@ class TypingEnv:
         
         return bigram_id, difficulty
     
-    # generate a random sentence containing the target bi-gram
-    def generate_sentence(self, target_bigram):
-        words = [
-            "the","quick","brown","fox","jumps","over",
-            "quiet","queen","quickly","quit","quiz",
-            "river","stone","strong","story","storm"
-        ]
-        sentence = " ".join(random.choices(words, k=10))
-        return sentence
+    # # generate a random sentence containing the target bi-gram
+    # def generate_sentence(self, target_bigram):
+    #     words = [
+    #         "the","quick","brown","fox","jumps","over",
+    #         "quiet","queen","quickly","quit","quiz",
+    #         "river","stone","strong","story","storm"
+    #     ]
+    #     sentence = " ".join(random.choices(words, k=10))
+    #     return sentence
+    
+    def sample_sentence(self, bigram_id, difficulty):
+        bigram = self.bigrams[bigram_id]
+        
+        try:
+            return self.dataset.sample(bigram, difficulty)
+        
+        except Exception:
+            # fallback to easiest difficulty
+            return self.dataset.sample(bigram, 0)
     
     # sigmoid function for accuracy simulation
     def sigmoid(self, x):
@@ -100,7 +114,8 @@ class TypingEnv:
     # environment step: process action, update state, and return reward
     def step(self, action):
         bigram_id, difficulty = self.decode_action(action)
-        sentence = self.generate_sentence(bigram_id)
+        sentence = self.sample_sentence(bigram_id, difficulty)
+        print(sentence)
         counts_dict = count_tracked_bigrams(sentence)
         counts = counts_to_vector(counts_dict)
         acc = self.simulate_accuracy(counts, difficulty)
