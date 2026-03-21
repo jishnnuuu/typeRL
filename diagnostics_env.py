@@ -88,4 +88,5 @@ plt.ylabel("Skill")
 plt.legend()
 
 plt.tight_layout()
+plt.savefig('figs/learning_forgetting_difficulty_curves.png')
 plt.show()
