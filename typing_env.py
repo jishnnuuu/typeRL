@@ -115,7 +115,7 @@ class TypingEnv:
     def step(self, action):
         bigram_id, difficulty = self.decode_action(action)
         sentence = self.sample_sentence(bigram_id, difficulty)
-        print(sentence)
+        # print(sentence)
         counts_dict = count_tracked_bigrams(sentence)
         counts = counts_to_vector(counts_dict)
         acc = self.simulate_accuracy(counts, difficulty)
