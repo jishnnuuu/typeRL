@@ -21,7 +21,7 @@ def run_random_agent(episodes=30, steps_per_episode=100):
     L = env.L
     
     all_rewards = []
-    all_avg_skills = []
+    all_skills = []
     
     tracked_bigram = 0
     tracked_skill = []
@@ -32,21 +32,21 @@ def run_random_agent(episodes=30, steps_per_episode=100):
         episode_rewards = []
         episode_skills = [] 
         
-        tracked_skill.append(env.k[tracked_bigram])
-        
         for step in range(steps_per_episode):
             # random action
             action = np.random.randint(0, K * L)
             
             state, reward, done, _ = env.step(action)
             
+            tracked_skill.append(env.k[tracked_bigram])
+            
             episode_rewards.append(reward)
             episode_skills.append(np.mean(env.k))
         all_rewards.append(np.mean(episode_rewards))
         # this shows final skills achieved in that episode
-        all_avg_skills.append(episode_skills[-1])
-        print(f"Episode {ep+1}: Avg Reward = {all_rewards[-1]:.4f}, Avg Skill = {all_avg_skills[-1]:.4f}")
-    return all_rewards, all_avg_skills, tracked_skill
+        all_skills.append(episode_skills[-1])
+        print(f"Episode {ep+1}: Avg Reward = {all_rewards[-1]:.4f}, Avg Skill = {all_skills[-1]:.4f}")
+    return all_rewards, all_skills, tracked_skill
 
 def plot_results(rewards, skills, tracked_skill):
     plt.figure(figsize=(12,4))

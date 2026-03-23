@@ -19,7 +19,9 @@ class TypingEnv:
         
         # learning parameters
         self.alpha = 0.15      # learning rate
-        self.lmbda = 0.004     # forgetting rate
+        
+        # lmbda changed from 0.004 --> 0.001 as forgetting parameter was strong!
+        self.lmbda = 0.001     # forgetting rate 
         self.eta = 0.1
         
         # skill vector
@@ -29,7 +31,7 @@ class TypingEnv:
         self.t = np.zeros(self.K)
         
         # dataset
-        self.dataset = SentenceDataset("typing_dataset.csv")
+        self.dataset = SentenceDataset("typing_dataset_cleaned.csv")
 
     # reset environment to initial state
     def reset(self):
@@ -64,7 +66,6 @@ class TypingEnv:
     
     def sample_sentence(self, bigram_id, difficulty):
         bigram = self.bigrams[bigram_id]
-        
         try:
             return self.dataset.sample(bigram, difficulty)
         
@@ -94,7 +95,13 @@ class TypingEnv:
     def update_skills(self, counts, acc):
         for b in range(self.K):
             c = counts[b]
+            """
             forget = self.lmbda * (1 - self.k[b]) * self.t[b]
+            
+            Before: linear growth → too harsh
+            Now: logarithmic → controlled forgetting
+            """
+            forget = self.lmbda * (1 - self.k[b]) * np.log(1 + self.t[b])
             if c > 0:
                 learn = self.alpha * acc[b] * np.log(1 + c) * (1 - self.k[b])
                 self.k[b] += learn - forget
@@ -103,13 +110,13 @@ class TypingEnv:
             # keep skills in valid range
             self.k[b] = np.clip(self.k[b], 0, 1)
             
-    # timer update: reset to 0 if practiced, otherwise increment by 1
+    # timer update: reset to 0 if practiced, otherwise increment by 0.3(1 is making the forgetting strong)
     def update_timers(self, counts):
         for b in range(self.K):
             if counts[b] > 0:
                 self.t[b] = 0
             else:
-                self.t[b] += 1
+                self.t[b] += 0.3
                 
     # environment step: process action, update state, and return reward
     def step(self, action):
@@ -131,5 +138,8 @@ class TypingEnv:
         next_state = self.get_state()
         done = False
         info = {}
+        
+        print("Avg skill before:", prev_avg_skill)
+        print("Avg skill after :", new_avg_skill)
         
         return next_state, reward, done, info

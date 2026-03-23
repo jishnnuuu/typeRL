@@ -11,10 +11,10 @@ import matplotlib.pyplot as plt
 
 from typing_env import TypingEnv
 
-
 def select_action(env):
-    # 1. find weakest bigram
-    weakest_bigram = np.argmin(env.k)
+    # consider forgetting + skill
+    scores = env.k - 0.1 * env.t   # penalize long-unseen bigrams
+    weakest_bigram = np.argmin(scores)
     
     # 2. choose difficulty based on skill
     skill = env.k[weakest_bigram]
@@ -48,11 +48,11 @@ def run_rule_agent(episodes=30, steps_per_episode=100):
         episode_rewards = []
         episode_skills = []
         
-        tracked_skill.append(env.k[tracked_bigram])
-        
         for step in range(steps_per_episode):
             action = select_action(env)
             state, reward, done, _ = env.step(action)
+            
+            tracked_skill.append(env.k[tracked_bigram])
             
             episode_rewards.append(reward)
             episode_skills.append(np.mean(env.k))
@@ -60,7 +60,7 @@ def run_rule_agent(episodes=30, steps_per_episode=100):
         all_rewards.append(np.mean(episode_rewards))
         all_skills.append(episode_skills[-1])
         
-        print(f"Episode {ep+1}: Skill = {all_skills[-1]:.4f}")
+        print(f"Episode {ep+1}: Avg Reward = {all_rewards[-1]:.4f}, Avg Skill = {all_skills[-1]:.4f}")
     return all_rewards, all_skills, tracked_skill
 
 def plot_results(rewards, skills, tracked):
