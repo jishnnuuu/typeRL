@@ -18,7 +18,7 @@ class TypingEnv:
         self.L = 5
         
         # learning parameters
-        self.alpha = 0.15      # learning rate
+        self.alpha = 0.1      # learning rate
         
         # lmbda changed from 0.004 --> 0.001 as forgetting parameter was strong!
         self.lmbda = 0.001     # forgetting rate 
@@ -109,6 +109,7 @@ class TypingEnv:
                 self.k[b] -= forget
             # keep skills in valid range
             self.k[b] = np.clip(self.k[b], 0, 1)
+            # self.k[b] = min(self.k[b], 0.98)
             
     # timer update: reset to 0 if practiced, otherwise increment by 0.3(1 is making the forgetting strong)
     def update_timers(self, counts):
@@ -133,7 +134,12 @@ class TypingEnv:
         
         new_avg_skill = np.mean(self.k)
         delta_skill = new_avg_skill - prev_avg_skill
-        reward = delta_skill + self.eta * acc[bigram_id]
+        reward = (
+                    2.0 * delta_skill
+                    + self.eta * acc[bigram_id]
+                    + 0.5 * np.mean(self.k)
+                    - 0.3 * np.mean(self.t)
+                )
         
         next_state = self.get_state()
         done = False
