@@ -183,6 +183,7 @@ def plot_dqn_results(rewards, skills):
     ax2.grid(True, alpha=0.3)
 
     plt.tight_layout()
+    plt.savefig("figs/dqn_agent.png")
     plt.show()
 
 # --- Execution Example ---

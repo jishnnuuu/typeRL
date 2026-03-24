@@ -18,10 +18,10 @@ class TypingEnv:
         self.L = 5
         
         # learning parameters
-        self.alpha = 0.1      # learning rate
+        self.alpha = 0.08        # learning rate
         
         # lmbda changed from 0.004 --> 0.001 as forgetting parameter was strong!
-        self.lmbda = 0.001     # forgetting rate 
+        self.lmbda = 0.004     # forgetting rate 
         self.eta = 0.1
         
         # skill vector
@@ -80,7 +80,7 @@ class TypingEnv:
     # simulate typing accuracy based on skill levels and difficulty
     def simulate_accuracy(self, counts, difficulty):
         acc = np.zeros(self.K)
-        difficulty_strength = difficulty * 0.15
+        difficulty_strength = difficulty * 0.25
         
         for b in range(self.K):
             c = int(counts[b])
@@ -109,7 +109,7 @@ class TypingEnv:
                 self.k[b] -= forget
             # keep skills in valid range
             self.k[b] = np.clip(self.k[b], 0, 1)
-            # self.k[b] = min(self.k[b], 0.98)
+            self.k[b] = min(self.k[b], 0.98)
             
     # timer update: reset to 0 if practiced, otherwise increment by 0.3(1 is making the forgetting strong)
     def update_timers(self, counts):
@@ -145,7 +145,7 @@ class TypingEnv:
         done = False
         info = {}
         
-        print("Avg skill before:", prev_avg_skill)
-        print("Avg skill after :", new_avg_skill)
+        # print("Avg skill before:", prev_avg_skill)
+        # print("Avg skill after :", new_avg_skill)
         
         return next_state, reward, done, info
