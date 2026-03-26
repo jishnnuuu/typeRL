@@ -49,13 +49,13 @@ class ReplayBuffer:
 class DQNAgent:
     def __init__(
         self,
-        lr=1e-3,
+        lr=1e-2,
         gamma=0.99,
         epsilon=1.0,
-        epsilon_decay=0.995,
+        epsilon_decay=0.999,
         epsilon_min=0.05,
-        batch_size=64,
-        target_update=10,
+        batch_size=128,
+        target_update=5,
     ):
         self.env = TypingEnv()
         

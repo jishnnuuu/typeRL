@@ -6,11 +6,11 @@ from typing_env import TypingEnv
 class QLearningAgent:
     def __init__(
         self,
-        n_bins=10,
-        alpha=0.1,
-        gamma=0.95,
+        n_bins=20,
+        alpha=0.3,
+        gamma=0.99,
         epsilon=1.0,
-        epsilon_decay=0.998,
+        epsilon_decay=0.999,
         epsilon_min=0.05,
     ):
         self.env = TypingEnv()

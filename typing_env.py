@@ -18,11 +18,11 @@ class TypingEnv:
         self.L = 5
         
         # learning parameters
-        self.alpha = 0.08        # learning rate
+        self.alpha = 0.2      # learning rate
         
         # lmbda changed from 0.004 --> 0.001 as forgetting parameter was strong!
-        self.lmbda = 0.004     # forgetting rate 
-        self.eta = 0.1
+        self.lmbda = 0.1    # forgetting rate
+        self.eta = 0.5
         
         # skill vector
         self.k = np.zeros(self.K)
@@ -31,12 +31,12 @@ class TypingEnv:
         self.t = np.zeros(self.K)
         
         # dataset
-        self.dataset = SentenceDataset("typing_dataset_cleaned.csv")
+        self.dataset = SentenceDataset("typing_dataset_words.csv")
 
     # reset environment to initial state
     def reset(self):
         # initialize skill levels randomly
-        self.k = np.random.uniform(0.2, 0.3, size=self.K)
+        self.k = np.random.uniform(0.05, 0.15, size=self.K)
         
         # reset timers
         self.t = np.zeros(self.K)
@@ -80,7 +80,7 @@ class TypingEnv:
     # simulate typing accuracy based on skill levels and difficulty
     def simulate_accuracy(self, counts, difficulty):
         acc = np.zeros(self.K)
-        difficulty_strength = difficulty * 0.25
+        difficulty_strength = difficulty * 0.1
         
         for b in range(self.K):
             c = int(counts[b])
@@ -109,7 +109,7 @@ class TypingEnv:
                 self.k[b] -= forget
             # keep skills in valid range
             self.k[b] = np.clip(self.k[b], 0, 1)
-            self.k[b] = min(self.k[b], 0.98)
+            self.k[b] = min(self.k[b], 0.95)
             
     # timer update: reset to 0 if practiced, otherwise increment by 0.3(1 is making the forgetting strong)
     def update_timers(self, counts):
@@ -117,7 +117,7 @@ class TypingEnv:
             if counts[b] > 0:
                 self.t[b] = 0
             else:
-                self.t[b] += 0.3
+                self.t[b] += 0.2
                 
     # environment step: process action, update state, and return reward
     def step(self, action):
@@ -135,10 +135,10 @@ class TypingEnv:
         new_avg_skill = np.mean(self.k)
         delta_skill = new_avg_skill - prev_avg_skill
         reward = (
-                    2.0 * delta_skill
+                    5.0 * delta_skill
                     + self.eta * acc[bigram_id]
-                    + 0.5 * np.mean(self.k)
-                    - 0.3 * np.mean(self.t)
+                    + 1.0 * np.mean(self.k)
+                    - 0.5 * np.mean(self.t)
                 )
         
         next_state = self.get_state()
