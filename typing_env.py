@@ -18,10 +18,10 @@ class TypingEnv:
         self.L = 5
         
         # learning parameters
-        self.alpha = 0.2      # learning rate
+        self.alpha = 0.08      # learning rate
         
         # lmbda changed from 0.004 --> 0.001 as forgetting parameter was strong!
-        self.lmbda = 0.1    # forgetting rate
+        self.lmbda = 0.002    # forgetting rate
         self.eta = 0.5
         
         # skill vector
@@ -31,7 +31,7 @@ class TypingEnv:
         self.t = np.zeros(self.K)
         
         # dataset
-        self.dataset = SentenceDataset("typing_dataset_words.csv")
+        self.dataset = SentenceDataset("typing_dataset_cleaned.csv")
 
     # reset environment to initial state
     def reset(self):
@@ -80,7 +80,7 @@ class TypingEnv:
     # simulate typing accuracy based on skill levels and difficulty
     def simulate_accuracy(self, counts, difficulty):
         acc = np.zeros(self.K)
-        difficulty_strength = difficulty * 0.1
+        difficulty_strength = 0.2 * (difficulty ** 1.5)
         
         for b in range(self.K):
             c = int(counts[b])
@@ -109,7 +109,7 @@ class TypingEnv:
                 self.k[b] -= forget
             # keep skills in valid range
             self.k[b] = np.clip(self.k[b], 0, 1)
-            self.k[b] = min(self.k[b], 0.95)
+            ## self.k[b] = min(self.k[b], 0.98)
             
     # timer update: reset to 0 if practiced, otherwise increment by 0.3(1 is making the forgetting strong)
     def update_timers(self, counts):
@@ -135,11 +135,11 @@ class TypingEnv:
         new_avg_skill = np.mean(self.k)
         delta_skill = new_avg_skill - prev_avg_skill
         reward = (
-                    5.0 * delta_skill
-                    + self.eta * acc[bigram_id]
-                    + 1.0 * np.mean(self.k)
-                    - 0.5 * np.mean(self.t)
-                )
+            2.0 * delta_skill
+            + 0.3 * acc[bigram_id]
+            + 0.3 * np.min(self.k)     # IMPORTANT change
+            - 0.1 * np.mean(self.t)
+        )
         
         next_state = self.get_state()
         done = False
