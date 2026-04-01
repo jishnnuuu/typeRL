@@ -28,7 +28,7 @@ Skills increase with practice and decay with neglect.
 
 When bigram $b$ appears in the sentence:
 
-$$k_b^{t+1} = k_b^t + \underbrace{\alpha \cdot acc_b \cdot \log(1 + c_b) \cdot (1 - k_b^t)}_{\text{learning}} \;-\; \underbrace{\lambda \cdot (1 - k_b^t) \cdot \log(1 + t_b)}_{\text{forgetting}}$$
+$$k_b^{t+1} = k_b^t + \underbrace{\alpha \cdot acc_b \cdot \log(1 + c_b) \cdot (1 - k_b^t)}_{\text{learning}} \ -\ \underbrace{\lambda \cdot (1 - k_b^t) \cdot \log(1 + t_b)}_{\text{forgetting}}$$
 
 When bigram $b$ does not appear:
 
@@ -72,7 +72,7 @@ This accuracy feeds directly into the skill update, scaling the learning term.
 
 | Component | Definition |
 |-----------|------------|
-| **State** | $s_t = [\,\mathbf{k}_t \;\|\; \mathbf{t}_t\,] \in \mathbb{R}^{80}$ — bigram skill levels concatenated with practice timers |
+| **State** | $s_t = [ \mathbf{k}_t \| \mathbf{t}_t] \in \mathbb{R}^{80}$ — bigram skill levels concatenated with practice timers |
 | **Action** | $a_t = (b_t,\, \ell_t)$ — target bigram × difficulty, encoded as $a = b \cdot L + \ell$, giving $\|\mathcal{A}\| = 40 \times 5 = 200$ |
 | **Transition** | Skill and timer updates as above |
 | **Reward** | See below |
@@ -82,7 +82,7 @@ This accuracy feeds directly into the skill update, scaling the learning term.
 
 ### Reward Function
 
-$$r_t = 2.0 \cdot \Delta\bar{k} \;+\; 0.3 \cdot acc_{b_t} \;+\; 0.3 \cdot \min_b\, k_b \;-\; 0.1 \cdot \bar{t}$$
+$$r_t = 2.0 \cdot \Delta\bar{k} +\ 0.3 \cdot acc_{b_t} +\ 0.3 \cdot \min_b\, k_b -\ 0.1 \cdot \bar{t}$$
 
 | Term | Role |
 |------|------|
@@ -101,7 +101,7 @@ The $\min_b\, k_b$ term is the most important design choice — without it, agen
 
 Greedy heuristic — always targets the bigram with the lowest score, sets difficulty based on current skill. No training required.
 
-$$b^* = \arg\min_b \;\bigl(k_b - 0.1 \cdot t_b\bigr)$$
+$$b^* = \arg\min_b \bigl(k_b - 0.1 \cdot t_b\bigr)$$
 
 | Skill $k_b$ | Difficulty assigned |
 |-------------|-------------------|
@@ -117,7 +117,7 @@ $$b^* = \arg\min_b \;\bigl(k_b - 0.1 \cdot t_b\bigr)$$
 
 Tabular RL agent. State is compressed to mean skill $\bar{k}$ and discretized into $N = 20$ bins. Q-table shape: $(20, 200)$. Update rule:
 
-$$Q(s, a) \;\leftarrow\; Q(s, a) + \alpha_Q \Bigl[\, r + \gamma \max_{a'} Q(s', a') - Q(s, a) \Bigr]$$
+$$Q(s, a) \leftarrow\ Q(s, a) + \alpha_Q \Bigl[\ r + \gamma \max_{a'} Q(s', a') - Q(s, a) \Bigr]$$
 
 | Hyperparameter | Value |
 |----------------|-------|
@@ -136,7 +136,7 @@ $$Q(s, a) \;\leftarrow\; Q(s, a) + \alpha_Q \Bigl[\, r + \gamma \max_{a'} Q(s', 
 
 Neural RL agent operating on the **full state** $s_t \in \mathbb{R}^{80}$. Eliminates the discretization bottleneck of Q-learning entirely.
 
-**Architecture:** $Q_\theta : \mathbb{R}^{80} \to \mathbb{R}^{200}$
+**Architecture:** $Q_\theta\ : \mathbb{R}^{80} \to \mathbb{R}^{200}$
 ```
 Linear(80 → 128) → ReLU → Linear(128 → 128) → ReLU → Linear(128 → 200)
 ```
