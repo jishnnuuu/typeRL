@@ -73,7 +73,7 @@ This accuracy feeds directly into the skill update, scaling the learning term.
 | Component | Definition |
 |-----------|------------|
 | **State** | $s_t = [ \mathbf{k}_t \| \mathbf{t}_t] \in \mathbb{R}^{80}$ — bigram skill levels concatenated with practice timers |
-| **Action** | $a_t = (b_t,\, \ell_t)$ — target bigram × difficulty, encoded as $a = b \cdot L + \ell$, giving $\|\mathcal{A}\| = 40 \times 5 = 200$ |
+| **Action** | $a_t = (b_t\, \ell_t)$ — target bigram × difficulty, encoded as $a = b \cdot L + \ell$, giving $\|\mathcal{A}\| = 40 \times 5 = 200$ |
 | **Transition** | Skill and timer updates as above |
 | **Reward** | See below |
 | **Discount** | $\gamma = 0.99$ |
