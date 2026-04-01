@@ -1,90 +1,97 @@
 # TypeRL
 
-TypeRL is an adaptive typing tutor powered by reinforcement learning.
-Instead of selecting random sentences, it learns which character patterns a user struggles with and schedules targeted exercises to maximize long-term typing improvement.
+An adaptive typing tutor powered by Reinforcement Learning. Instead of random sentence selection, TypeRL learns which bigrams you struggle with and schedules targeted exercises to maximize your long-term typing improvement.
 
 ---
 
 ## Overview
 
-Most typing tutors rely on static or random sentence selection and do not adapt to individual weaknesses. TypeRL formulates exercise selection as a sequential decision-making problem and solves it using reinforcement learning.
+Most typing tutors (MonkeyType, Keybr, TypeRacer) use static or random sentence selection. TypeRL treats exercise selection as a **sequential decision-making problem** and solves it with RL — choosing *which* character pattern to practice, *how hard* to make it, and *when to revisit* previously learned patterns.
 
-At each step, the system decides:
-
-* which bigram to practice,
-* what difficulty level to use,
-* when to revisit previously learned patterns.
-
-Typing skill is represented as a vector of bigram mastery levels, and the agent learns a curriculum policy that improves performance across all patterns.
+Typing skill is modeled as a vector of **bigram mastery levels** (e.g., `th`, `er`, `qu`, `st`). The RL agent learns a curriculum policy that maximizes cumulative skill improvement across all bigrams.
 
 ---
 
-## Core Idea
+## How It Works
 
-Typing is decomposed into **bigrams** (character transitions), such as:
+### Bigram Skill Model
 
-```
-queen → qu, ue, ee, en
-```
+40 tracked bigrams cover the most frequent English character transitions. Each bigram has a mastery score:
 
-Instead of a single metric like WPM, the system models:
+$$k_b \in [0, 1]$$
 
-```
-k = [k_th, k_er, k_qu, k_st, ...]
-```
-
-This enables:
-
-* targeted practice,
-* identification of weak patterns,
-* personalized learning progression.
+Skills increase with practice and decay with neglect.
 
 ---
 
-## Skill Model
+### Skill Update Rule
 
-* 40 high-frequency English bigrams are tracked
-* Each bigram has a mastery score:
-  $k_b \in [0, 1]$
-* Skills improve with practice and decay over time
+When bigram $b$ appears in the sentence:
 
-### Skill Update
+$$k_b^{t+1} = k_b^t + \underbrace{\alpha \cdot acc_b \cdot \log(1 + c_b) \cdot (1 - k_b^t)}_{\text{learning}} \;-\; \underbrace{\lambda \cdot (1 - k_b^t) \cdot \log(1 + t_b)}_{\text{forgetting}}$$
 
-$$
-k_b \leftarrow \text{clip}\left(
-k_b +
-\alpha \cdot acc_b \cdot \log(1+c_b) \cdot (1-k_b)
---------------------------------------------------
+When bigram $b$ does not appear:
 
-\lambda \cdot (1-k_b) \cdot \log(1+t_b),
-\ 0,\ 1
-\right)
-$$
+$$k_b^{t+1} = k_b^t - \lambda \cdot (1 - k_b^t) \cdot \log(1 + t_b)$$
 
-| Symbol            | Meaning                      |
-| ----------------- | ---------------------------- |
-| $\alpha = 0.08$   | Learning rate                |
-| $\lambda = 0.002$ | Forgetting rate              |
-| $acc_b$           | Typing accuracy              |
-| $c_b$             | Bigram frequency in sentence |
-| $t_b$             | Time since last practice     |
+| Symbol | Meaning | Value |
+|--------|---------|-------|
+| $\alpha$ | Learning rate | 0.08 |
+| $\lambda$ | Forgetting rate | 0.002 |
+| $acc_b$ | Simulated typing accuracy for bigram $b$ | — |
+| $c_b$ | Number of times bigram appeared in the sentence | — |
+| $t_b$ | Steps since bigram was last practiced | — |
+
+The $(1 - k_b)$ factor in both terms ensures **diminishing returns** — improvement slows as mastery approaches 1, and forgetting is gentler on already-weak skills. Logarithmic scaling on both $c_b$ and $t_b$ prevents runaway growth from excessive repetition or long gaps.
 
 ---
 
-## Reinforcement Learning Formulation
+### Typing Performance Simulation
 
-| Component    | Description                                            |
-| ------------ | ------------------------------------------------------ |
-| State        | $s = [\mathbf{k} | \mathbf{t}] \in \mathbb{R}^{80}$    |
-| Action       | $(b, \ell)$ — bigram × difficulty (0–4)                |
-| Action Space | 200 actions                                            |
-| Reward       | $2\Delta\bar{k} + 0.3,acc + 0.3,\min(k) - 0.1,\bar{t}$ |
+Difficulty level $\ell \in \{0, 1, 2, 3, 4\}$ is mapped nonlinearly to a difficulty strength:
 
-The reward encourages:
+$$d_\ell = 0.2 \cdot \ell^{\,1.5}$$
 
-* overall improvement,
-* focus on weakest skills,
-* balanced coverage across all bigrams.
+The probability of correctly typing bigram $b$ at difficulty $\ell$ is modeled with the logistic function:
+
+$$p_b = \sigma(k_b - d_\ell) = \frac{1}{1 + e^{-(k_b - d_\ell)}}$$
+
+For each of the $c_b$ occurrences of bigram $b$ in the sentence, a Bernoulli trial is drawn:
+
+$$X_i \sim \text{Bernoulli}(p_b), \qquad i = 1, \ldots, c_b$$
+
+Typing accuracy is then:
+
+$$acc_b = \frac{1}{c_b} \sum_{i=1}^{c_b} X_i$$
+
+This accuracy feeds directly into the skill update, scaling the learning term.
+
+---
+
+### MDP Formulation
+
+| Component | Definition |
+|-----------|------------|
+| **State** | $s_t = [\,\mathbf{k}_t \;\|\; \mathbf{t}_t\,] \in \mathbb{R}^{80}$ — bigram skill levels concatenated with practice timers |
+| **Action** | $a_t = (b_t,\, \ell_t)$ — target bigram × difficulty, encoded as $a = b \cdot L + \ell$, giving $\|\mathcal{A}\| = 40 \times 5 = 200$ |
+| **Transition** | Skill and timer updates as above |
+| **Reward** | See below |
+| **Discount** | $\gamma = 0.99$ |
+
+---
+
+### Reward Function
+
+$$r_t = 2.0 \cdot \Delta\bar{k} \;+\; 0.3 \cdot acc_{b_t} \;+\; 0.3 \cdot \min_b\, k_b \;-\; 0.1 \cdot \bar{t}$$
+
+| Term | Role |
+|------|------|
+| $\Delta\bar{k} = \bar{k}_{t+1} - \bar{k}_t$ | Rewards overall skill growth |
+| $acc_{b_t}$ | Rewards accurate performance on the target bigram |
+| $\min_b\, k_b$ | Penalizes neglecting the weakest bigram |
+| $\bar{t} = \frac{1}{K}\sum_b t_b$ | Penalizes letting patterns go unpracticed |
+
+The $\min_b\, k_b$ term is the most important design choice — without it, agents converge to drilling easy bigrams and maximizing the average while ignoring weak ones.
 
 ---
 
@@ -92,152 +99,119 @@ The reward encourages:
 
 ### Rule-Based (Baseline)
 
-A heuristic policy that selects the weakest bigram and assigns difficulty based on skill.
+Greedy heuristic — always targets the bigram with the lowest score, sets difficulty based on current skill. No training required.
 
-* No learning
-* Interpretable baseline
-* Ensures coverage
+$$b^* = \arg\min_b \;\bigl(k_b - 0.1 \cdot t_b\bigr)$$
+
+| Skill $k_b$ | Difficulty assigned |
+|-------------|-------------------|
+| $[0.00,\; 0.30)$ | 0 |
+| $[0.30,\; 0.50)$ | 1 |
+| $[0.50,\; 0.70)$ | 2 |
+| $[0.70,\; 0.85)$ | 3 |
+| $[0.85,\; 1.00]$ | 4 |
 
 ---
 
 ### Q-Learning
 
-Tabular reinforcement learning agent.
+Tabular RL agent. State is compressed to mean skill $\bar{k}$ and discretized into $N = 20$ bins. Q-table shape: $(20, 200)$. Update rule:
 
-* State: discretized mean skill
-* Q-table: $(20, 200)$
+$$Q(s, a) \;\leftarrow\; Q(s, a) + \alpha_Q \Bigl[\, r + \gamma \max_{a'} Q(s', a') - Q(s, a) \Bigr]$$
 
-**Limitation:** loses per-bigram information, reducing precision.
+| Hyperparameter | Value |
+|----------------|-------|
+| $\alpha_Q$ | 0.3 |
+| $\gamma$ | 0.99 |
+| $\epsilon_0$ | 1.0 |
+| $\epsilon$ decay | 0.999 |
+| $\epsilon_{\min}$ | 0.05 |
+| Bins $N$ | 20 |
+
+> **Limitation:** Compressing state to $\bar{k}$ loses all per-bigram information. The agent cannot distinguish which specific bigrams are weak.
 
 ---
 
 ### DQN (Deep Q-Network)
 
-Neural reinforcement learning agent using the full state.
+Neural RL agent operating on the **full state** $s_t \in \mathbb{R}^{80}$. Eliminates the discretization bottleneck of Q-learning entirely.
 
+**Architecture:** $Q_\theta : \mathbb{R}^{80} \to \mathbb{R}^{200}$
 ```
-Input (80)
- → Linear → ReLU
- → Linear(128) → ReLU
- → Linear(128)
- → Output (200)
+Linear(80 → 128) → ReLU → Linear(128 → 128) → ReLU → Linear(128 → 200)
 ```
 
-| Parameter         | Value            |
-| ----------------- | ---------------- |
-| Optimizer         | Adam (1e-3)      |
-| Replay buffer     | 10,000           |
-| Batch size        | 64               |
-| Target update     | every 5 episodes |
-| Discount $\gamma$ | 0.99             |
-| ε decay           | 0.995 → 0.05     |
+**Loss:**
 
----
+$$\mathcal{L}(\theta) = \mathbb{E}\left[\left(Q_\theta(s, a) - \Bigl(r + \gamma \max_{a'} Q_{\theta^-}(s', a')\Bigr)\right)^2\right]$$
 
-## Environment Model
+where $\theta^-$ denotes the target network parameters.
 
-Typing performance is simulated using a logistic model:
-
-$$
-p_b = \sigma(k_b - d_\ell), \quad d_\ell = 0.2 \cdot \ell^{1.5}
-$$
-
-Each bigram occurrence is modeled as:
-
-$$
-X_i \sim \text{Bernoulli}(p_b), \quad acc_b = \frac{1}{c_b}\sum X_i
-$$
-
-This introduces realistic variability in typing behavior.
-
----
-
-## Dataset
-
-Sentences are generated using Llama 3.1 (via Groq API).
-
-* 40 bigrams
-* 5 difficulty levels
-* 20 sentences per pair
-
-Total: **4,000 sentences**
-
-Each sentence:
-
-* contains the target bigram at least 5 times
-* is 8–12 words long
-* maintains natural language structure
+| Hyperparameter | Value |
+|----------------|-------|
+| Optimizer | Adam, lr = 1e-3 |
+| Replay buffer | 10,000 |
+| Batch size | 64 |
+| Target network update | Every 5 episodes |
+| $\gamma$ | 0.99 |
+| $\epsilon_0$ → $\epsilon_{\min}$ | 1.0 → 0.05 (decay 0.995) |
 
 ---
 
 ## Results
 
-Each agent is trained for:
+> 100 episodes × 200 steps per episode, same environment across all agents.
 
-* 100 episodes
-* 200 steps per episode
+| Agent | Avg Reward | Final Mean Skill $\bar{k}$ |
+|-------|-----------|--------------------------|
+| Rule-Based | — | — |
+| Q-Learning | — | — |
+| DQN | — | — |
 
-Metrics:
-
-* average reward
-* mean skill
-* weakest skill
-
-| Agent      | Avg Reward | Final Mean Skill |
-| ---------- | ---------- | ---------------- |
-| Rule-Based | —          | —                |
-| Q-Learning | —          | —                |
-| DQN        | —          | —                |
-
-Training curves:
+*Fill in after running `compare_agents.py`.*
 
 ![Agent Comparison](figs/compare_agents.png)
 
 ---
 
 ## Project Structure
-
 ```
 TypeRL/
-├── bigrams.py
-├── text_processing.py
-├── generate_dataset.py
-├── dataset_loader.py
-├── typing_env.py
-├── rule_based_agent.py
-├── q_learning.py
-├── dqn_agent.py
-├── compare_agents.py
-├── typing_component.py
+├── bigrams.py                   # 40 tracked English bigrams
+├── text_processing.py           # Bigram extraction from sentences
+├── generate_dataset.py          # LLM dataset generation (Groq / Llama 3.1)
+├── dataset_loader.py            # O(1) sentence sampling by (bigram, difficulty)
+├── typing_env.py                # Core RL environment (MDP)
+├── rule_based_agent.py          # Greedy heuristic baseline
+├── q_learning.py                # Tabular Q-learning agent
+├── dqn_agent.py                 # Deep Q-Network agent (PyTorch)
+├── compare_agents.py            # Train and compare all three agents
+├── typing_component.py          # Streamlit interactive typing UI (HTML/JS)
 ├── typing_dataset_cleaned.csv
-└── figs/
+└── figs/                        # Output plots
 ```
 
 ---
 
 ## Getting Started
 
-### Install dependencies
-
+**1. Install dependencies**
 ```bash
 pip install numpy torch matplotlib streamlit groq python-dotenv tenacity
 ```
 
-### Generate dataset (optional)
-
+**2. Generate the dataset** (skip if you already have `typing_dataset_cleaned.csv`)
 ```bash
 echo "GROQ_API_KEY=your_key_here" > .env
 python generate_dataset.py
 ```
 
-### Train and compare agents
-
+**3. Train and compare all agents**
 ```bash
 python compare_agents.py
 ```
 
-### Run individual agents
-
+**4. Run individual agents**
 ```bash
 python rule_based_agent.py
 python q_learning.py
@@ -246,17 +220,22 @@ python dqn_agent.py
 
 ---
 
-## Key Design Decisions
+## Dataset
 
-* Logarithmic forgetting prevents rapid skill collapse
-* Nonlinear difficulty better models real typing complexity
-* Minimum skill term ensures weak patterns are addressed
-* LLM-generated dataset enables controlled training data
-* Full-state DQN enables fine-grained curriculum learning
+Sentences were generated using **Llama 3.1-8b via Groq API**.
+
+$$40 \text{ bigrams} \times 5 \text{ difficulties} \times 20 \text{ sentences} = 4{,}000 \text{ sentences}$$
+
+Each sentence is constrained to contain the target bigram **at least 5 times**, use natural English flow, and match the assigned difficulty level (simple vocabulary at level 0 through complex sentence structure at level 4).
 
 ---
 
-## Summary
+## Key Design Decisions
 
-TypeRL reframes typing practice as a learning problem.
-Instead of fixed exercises, it learns how to teach by adapting to the user’s evolving skill profile.
+- **Logarithmic forgetting** over linear — $\log(1 + t_b)$ prevents skill collapse during long gaps; linear decay was too aggressive in practice
+- **Nonlinear difficulty** $d_\ell = 0.2 \cdot \ell^{1.5}$ — better reflects real-world difficulty growth than linear scaling
+- **$\min_b\, k_b$ in reward** — forces attention to the weakest bigram rather than optimizing the mean
+- **LLM-generated sentences** — decouples sentence generation from the learning model; any sentence source producing bigram counts is compatible
+- **Full state for DQN** — unlike Q-learning, DQN sees all 40 per-bigram skills and timers, enabling fine-grained curriculum decisions
+
+---
