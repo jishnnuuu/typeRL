@@ -19,6 +19,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import numpy as np
 from typing_env import TypingEnv
+from text_processing import count_tracked_bigrams, counts_to_vector
 
 
 # rule-based agent action selection
@@ -38,9 +39,48 @@ def select_rule_action(env):
         difficulty = 3
     else:
         difficulty = 4
-    
     action = weakest_bigram * env.L + difficulty
     return action
+
+
+# custom step for full visibility into the environment's internal workings
+def step_with_logging(env, action):
+    bigram_id, difficulty = env.decode_action(action)
+    
+    # ---- Sentence ----
+    sentence = env.sample_sentence(bigram_id, difficulty)
+    
+    # ---- Counts ----
+    counts_dict = count_tracked_bigrams(sentence)
+    counts = counts_to_vector(counts_dict)
+    
+    # ---- Accuracy ----
+    acc = env.simulate_accuracy(counts, difficulty)
+    
+    # ---- Before ----
+    prev_k = env.k.copy()
+    
+    # ---- Apply updates ----
+    env.update_skills(counts, acc)
+    env.update_timers(counts)
+    
+    # ---- After ----
+    new_k = env.k.copy()
+    
+    # ---- Changes ----
+    delta_k = new_k - prev_k
+    
+    return {
+        "bigram_id": bigram_id,
+        "bigram": env.bigrams[bigram_id],
+        "difficulty": difficulty,
+        "sentence": sentence,
+        "counts": counts,
+        "accuracy": acc,
+        "prev_k": prev_k,
+        "new_k": new_k,
+        "delta_k": delta_k,
+    }
 
 
 # rule based
@@ -54,48 +94,39 @@ def run_episode(steps=20):
     logs = []
     
     for step in range(steps):
-        # select action based on current state
         action = select_rule_action(env)
-        bigram_id, difficulty = env.decode_action(action)
         
-        # ---- Before Step ----
-        prev_k = env.k.copy()
-        prev_avg = np.mean(prev_k)
+        log = step_with_logging(env, action)
         
-        # ---- Step ----
-        next_state, reward, done, _ = env.step(action)
-        
-        # ---- After Step ----
-        new_k = env.k.copy()
-        new_avg = np.mean(new_k)
-        
-        delta = new_avg - prev_avg
-        
-        # ---- Log Info ----
-        log = {
-            "step": step,
-            "bigram_id": bigram_id,
-            "bigram": env.bigrams[bigram_id],
-            "difficulty": difficulty,
-            "reward": reward,
-            "avg_skill": new_avg,
-            "delta_skill": delta,
-            "k_vector": new_k.copy(),
-        }
+        log["step"] = step
+        log["avg_skill"] = np.mean(log["new_k"])
         
         logs.append(log)
         
-        # ---- Print (for debugging now) ----
+        # ---- Debug Print ----
         print(f"Step {step}")
-        print(f"  Bigram     : {log['bigram']}")
-        print(f"  Difficulty : {difficulty}")
-        print(f"  Reward     : {reward:.4f}")
-        print(f"  Avg Skill  : {new_avg:.4f}")
-        print(f"  Delta Skill: {delta:.4f}")
-        print("-" * 40)
+        print(f"  Target Bigram : {log['bigram']}")
+        print(f"  Difficulty    : {log['difficulty']}")
+        print(f"  Sentence      : {log['sentence'][:60]}...")
+        
+        # Show only active bigrams
+        active = np.where(log["counts"] > 0)[0]
+        
+        print("  Active Bigrams (count, acc, delta):")
+        for b in active:
+            print(
+                f"    {env.bigrams[b]} | "
+                f"count={int(log['counts'][b])} | "
+                f"acc={log['accuracy'][b]:.2f} | "
+                f"Δ={log['delta_k'][b]:.4f}"
+            )
+            
+        print(f"  Avg Skill: {log['avg_skill']:.4f}")
+        print("-" * 50)
+        
     return logs
 
 
 # run script
 if __name__ == "__main__":
-    logs = run_episode(steps=20)
+    logs = run_episode(steps=10)
