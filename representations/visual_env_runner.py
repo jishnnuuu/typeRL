@@ -21,7 +21,7 @@ import numpy as np
 from typing_env import TypingEnv
 from text_processing import count_tracked_bigrams, counts_to_vector
 
-from visualizer import plot_step
+from visualizer import plot_step, animate_episode
 
 # rule-based agent action selection
 def select_rule_action(env):
@@ -132,5 +132,7 @@ def run_episode(steps=20):
 if __name__ == "__main__":
     logs = run_episode(steps=10)
     
-    # visualize
-    plot_step(logs[-1], bigrams=TypingEnv().bigrams)
+    # # visualize final step
+    # plot_step(logs[-1], bigrams=TypingEnv().bigrams)
+    
+    animate_episode(logs, bigrams=TypingEnv().bigrams, delay=1)
