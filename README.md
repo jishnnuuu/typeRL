@@ -187,13 +187,13 @@ This animation is the quickest way to inspect whether a reward change is helping
 
 ### Before Reward Tuning
 
-![Multi-agent comparison animation (baseline reward)](figs/compare_visuals.gif)
+![Multi-agent comparison animation (baseline reward)](figs/compare_visuals_fixed.gif)
 
 **Initial reward configuration:** Heavy emphasis on average skill growth without sufficient focus on weakest bigram improvement.
 
 ### After Reward Tuning
 
-![Multi-agent comparison animation (tuned reward)](figs/compare_visuals_reward_tuning.gif)
+![Multi-agent comparison animation (tuned reward)](figs/compare_visuals_reward_tuning_fixed.gif)
 
 **Optimized reward configuration:** Better balance between average skill growth, individual bigram neglect penalty, and weakest-bigram focus. Notice the more consistent and balanced improvement across all bigrams.
 
