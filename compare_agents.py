@@ -2,8 +2,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from typing_env import TypingEnv
-from q_learning import QLearningAgent
-from dqn_agent import DQNAgent
+from agents.q_learning import QLearningAgent
+from agents.dqn_agent import DQNAgent
 
 
 # -------------------------------

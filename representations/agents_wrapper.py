@@ -3,8 +3,8 @@
 import numpy as np
 import torch
 
-from q_learning import QLearningAgent
-from dqn_agent import QNetwork
+from agents.q_learning import QLearningAgent
+from agents.dqn_agent import QNetwork
 
 # rule based agent
 def rule_action(env):

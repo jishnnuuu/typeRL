@@ -10,7 +10,7 @@ import numpy as np
 
 from typing_component import typing_tutor_component
 from typing_env import TypingEnv
-from dqn_agent import DQNAgent
+from agents.dqn_agent import DQNAgent
 from text_processing import count_tracked_bigrams, counts_to_vector
 
 # ─────────────────────────────────────────────────────────────────────────────
