@@ -121,9 +121,11 @@ class DQNAgent:
         self.optimizer.step()
 
     # training loop
-    def train(self, episodes=100, steps_per_episode=200):
+    def train(self, episodes=300, steps_per_episode=500):
         all_rewards = []
-        all_skills = []
+        avg_skills = []
+        min_skills = []
+        std_skills = []
         best_skill = -np.inf
         
         for ep in range(episodes):
@@ -150,7 +152,10 @@ class DQNAgent:
             final_skill = np.mean(self.env.k)
             
             all_rewards.append(avg_reward)
-            all_skills.append(final_skill)
+            avg_skills.append(np.mean(self.env.k))
+            min_skills.append(np.min(self.env.k))
+            std_skills.append(np.std(self.env.k))
+
             # ---- Save BEST model ----
             if final_skill > best_skill:
                 best_skill = final_skill
@@ -159,7 +164,7 @@ class DQNAgent:
             print(f"Ep {ep+1} | Reward: {avg_reward:.4f} | Skill: {final_skill:.4f} | Eps: {self.epsilon:.3f}")
         # Save final model
         self.save_model("models/dqn_model_final.pth")
-        return all_rewards, all_skills
+        return all_rewards, avg_skills, min_skills, std_skills
     
     def save_model(self, path="models/dqn_model.pth"):
         torch.save(self.q_net.state_dict(), path)
@@ -207,7 +212,7 @@ if __name__ == "__main__":
     agent = DQNAgent()
     
     # Run the training (this uses your existing train method)
-    rewards, skills = agent.train(episodes=100, steps_per_episode=300)
+    rewards, skills, min_skills, std_skills = agent.train(episodes=300, steps_per_episode=500)
     
     # Generate the plots
     plot_dqn_results(rewards, skills)

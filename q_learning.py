@@ -6,7 +6,7 @@ from typing_env import TypingEnv
 class QLearningAgent:
     def __init__(
         self,
-        n_bins=20,
+        n_bins=50,
         alpha=0.3,
         gamma=0.99,
         epsilon=1.0,
@@ -54,9 +54,11 @@ class QLearningAgent:
         td_target = r + self.gamma * best_next
         self.Q[s, a] += self.alpha * (td_target - self.Q[s, a])
     
-    def train(self, episodes=100, steps_per_episode=200):
+    def train(self, episodes=300, steps_per_episode=500):
         all_rewards = []
-        all_skills = []
+        avg_skills = []
+        min_skills = []
+        std_skills = []
         
         for ep in range(episodes):
             self.env.reset()
@@ -82,12 +84,14 @@ class QLearningAgent:
             final_skill = np.mean(self.env.k)
             
             all_rewards.append(avg_ep_reward)
-            all_skills.append(final_skill)
+            avg_skills.append(np.mean(self.env.k))
+            min_skills.append(np.min(self.env.k))
+            std_skills.append(np.std(self.env.k))
             
             if (ep + 1) % 10 == 0:
                 print(f"Episode {ep+1} | Reward: {avg_ep_reward:.4f} | Skill: {final_skill:.4f} | Epsilon: {self.epsilon:.3f}")
                 
-        return all_rewards, all_skills
+        return all_rewards, avg_skills, min_skills, std_skills
 
 def smooth(x, window=5):
     return np.convolve(x, np.ones(window)/window, mode='valid')
@@ -114,7 +118,7 @@ if __name__ == "__main__":
     agent = QLearningAgent(n_bins=10, alpha=0.1, gamma=0.95)
     
     # Run training
-    rewards, skills = agent.train(episodes=100, steps_per_episode=200)
+    rewards, skills, min_skills, std_skills = agent.train(episodes=300, steps_per_episode=500)
     
     # Plotting
     plot_results(rewards, skills)

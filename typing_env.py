@@ -9,7 +9,7 @@ from dataset_loader import SentenceDataset
 
 
 class TypingEnv:
-    def __init__(self):
+    def __init__(self, reward_weights=None):
         # bigram settings
         self.bigrams = BIGRAM_BAG
         self.K = len(self.bigrams)
@@ -20,9 +20,22 @@ class TypingEnv:
         # learning parameters
         self.alpha = 0.08      # learning rate
         
-        # lmbda changed from 0.004 --> 0.001 as forgetting parameter was strong!
         self.lmbda = 0.003    # forgetting rate
         self.eta = 0.5
+        
+        self.max_steps = 600
+        self.current_step = 0
+
+        # reward weights exposed for experimentation and reporting
+        default_weights = {
+            "delta_skill": 2.0,
+            "accuracy": 1.0,
+            "weak_avg": 3.0,
+            "timer_penalty": 1.0,
+            "std_penalty": 0.5,
+        }
+
+        self.reward_weights = reward_weights if reward_weights else default_weights
         
         # skill vector
         self.k = np.zeros(self.K)
@@ -35,6 +48,8 @@ class TypingEnv:
 
     # reset environment to initial state
     def reset(self):
+        self.current_step = 0
+        
         # initialize skill levels randomly
         self.k = np.random.uniform(0.05, 0.15, size=self.K)
         
@@ -135,17 +150,31 @@ class TypingEnv:
         new_avg_skill = np.mean(self.k)
         delta_skill = new_avg_skill - prev_avg_skill
         reward = (
-            2.0 * delta_skill
-            + 0.3 * acc[bigram_id]
-            + 0.3 * np.min(self.k)     # IMPORTANT change
-            - 0.1 * np.mean(self.t)
+            self.reward_weights["delta_skill"] * delta_skill
+            + self.reward_weights["accuracy"] * acc[bigram_id]
+            + self.reward_weights["weak_avg"] * np.mean(np.sort(self.k)[:5])
+            - self.reward_weights["timer_penalty"] * np.mean(self.t)
+            - self.reward_weights["std_penalty"] * min(np.std(self.k), 0.3)  
         )
         
         next_state = self.get_state()
         done = False
-        info = {}
+        info = {
+            "reward_components": {
+                "delta_skill": delta_skill,
+                "target_accuracy": acc[bigram_id],
+                "weak_avg": np.mean(np.sort(self.k)[:5]),
+                "std_k": min(np.std(self.k), 0.3),
+                "mean_timer": np.mean(self.t),
+            },
+            "reward_weights": self.reward_weights.copy(),
+            "reward": reward,
+        }
         
         # print("Avg skill before:", prev_avg_skill)
         # print("Avg skill after :", new_avg_skill)
+        
+        self.current_step += 1
+        done = self.current_step >= self.max_steps
         
         return next_state, reward, done, info
