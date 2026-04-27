@@ -151,4 +151,4 @@ def run_multi_agent(steps=20, save_path=None, show=True, fps=4):
 
 
 if __name__ == "__main__":
-    run_multi_agent(steps=50, save_path="figs/compare_visuals.gif")
+    run_multi_agent(steps=50, save_path="figs/compare_visuals_reward_tuning.gif")

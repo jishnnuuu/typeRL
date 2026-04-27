@@ -37,12 +37,14 @@ $$k_b^{t+1} = k_b^t - \lambda \cdot (1 - k_b^t) \cdot \log(1 + t_b)$$
 | Symbol | Meaning | Value |
 |--------|---------|-------|
 | $\alpha$ | Learning rate | 0.08 |
-| $\lambda$ | Forgetting rate | 0.002 |
+| $\lambda$ | Forgetting rate | 0.003 |
 | $acc_b$ | Simulated typing accuracy for bigram $b$ | — |
 | $c_b$ | Number of times bigram appeared in the sentence | — |
 | $t_b$ | Steps since bigram was last practiced | — |
 
 The $(1 - k_b)$ factor in both terms ensures **diminishing returns** — improvement slows as mastery approaches 1, and forgetting is gentler on already-weak skills. Logarithmic scaling on both $c_b$ and $t_b$ prevents runaway growth from excessive repetition or long gaps.
+
+**Timer dynamics:** When a bigram is practiced ($c_b > 0$), $t_b$ resets to 0. Otherwise, $t_b$ increments by 0.2 each step, creating a gentle decay signal that encourages revisiting neglected patterns without imposing harsh penalties.
 
 ---
 
@@ -82,16 +84,23 @@ This accuracy feeds directly into the skill update, scaling the learning term.
 
 ### Reward Function
 
-$$r_t = 2.0 \cdot \Delta\bar{k} +\ 0.3 \cdot acc_{b_t} +\ 0.3 \cdot \min_b\, k_b -\ 0.1 \cdot \bar{t}$$
+### Reward Function
 
-| Term | Role |
-|------|------|
-| $\Delta\bar{k} = \bar{k}_{t+1} - \bar{k}_t$ | Rewards overall skill growth |
-| $acc_{b_t}$ | Rewards accurate performance on the target bigram |
-| $\min_b\, k_b$ | Penalizes neglecting the weakest bigram |
-| $\bar{t} = \frac{1}{K}\sum_b t_b$ | Penalizes letting patterns go unpracticed |
+After reward tuning (via Optuna), the final reward function is:
 
-The $\min_b\, k_b$ term is the most important design choice — without it, agents converge to drilling easy bigrams and maximizing the average while ignoring weak ones.
+$$r_t = w_{\Delta k} \cdot \Delta\bar{k} +\ w_{acc} \cdot acc_{b_t} +\ w_{weak} \cdot \bar{k}_{\text{weak}} -\ w_t \cdot \bar{t} -\ w_{std} \cdot \sigma_k$$
+
+where $\bar{k}_{\text{weak}}$ is the mean of the 5 weakest bigrams, and $\sigma_k$ is the standard deviation of skill (clipped at 0.3).
+
+| Term | Meaning | Tuned Weight |
+|------|---------|------------|
+| $\Delta\bar{k}$ | Avg skill improvement | **4.33** |
+| $acc_{b_t}$ | Accuracy on target bigram | **0.04** |
+| $\bar{k}_{\text{weak}}$ | Mean of 5 weakest bigrams | **1.25** |
+| $\bar{t}$ | Mean practice timer | **−0.6** |
+| $\sigma_k$ | Skill std dev (capped 0.3) | **−0.4** |
+
+**Design rationale:** The high weight on $\Delta\bar{k}$ (4.33) drives overall improvement and dominates the reward signal. The weak-bigram term ($w_{weak} = 1.25$) ensures the agent attends to struggling patterns, not just optimizing for average. The std-dev penalty discourages drilling only easy bigrams while neglecting hard ones. The timer penalty ($w_t = 0.6$) creates a soft pressure to revisit neglected patterns regularly. These weights were found via hyperparameter optimization to balance overall skill growth with balanced, comprehensive learning across all bigrams.
 
 ---
 
@@ -172,23 +181,35 @@ where $\theta^-$ denotes the target network parameters.
 
 ![Agent Comparison](figs/compare_agents.png)
 
-## Demo
+## Demo: Before & After Reward Tuning
 
 This animation is the quickest way to inspect whether a reward change is helping the weakest bigrams or just inflating the average.
 
-![Multi-agent comparison animation](figs/compare_visuals.gif)
+### Before Reward Tuning
 
-## Reward Debug Log
+![Multi-agent comparison animation (baseline reward)](figs/compare_visuals.gif)
 
-I ran into a reward-shaping problem during development: an early version of the environment rewarded average skill too heavily, so the agents could look better on aggregate while still neglecting the weakest bigram.
+**Initial reward configuration:** Heavy emphasis on average skill growth without sufficient focus on weakest bigram improvement.
 
-The current version makes that issue visible and easier to debug by logging the reward components directly from the environment and by keeping the weakest-skill term in the reward. That gives me a clear before/after baseline for future reward improvements.
+### After Reward Tuning
 
-Planned follow-up work:
+![Multi-agent comparison animation (tuned reward)](figs/compare_visuals_reward_tuning.gif)
 
-1. Compare the current reward against the next reward revision using the same visualization.
-2. Tune the reward weights and confirm the weakest bigram improves, not just the mean.
-3. Keep the README updated with each reward iteration so the project history stays auditable.
+**Optimized reward configuration:** Better balance between average skill growth, individual bigram neglect penalty, and weakest-bigram focus. Notice the more consistent and balanced improvement across all bigrams.
+
+---
+
+## Reward Shaping & Debugging
+
+During development, I encountered a critical reward-shaping problem: an early version of the environment rewarded average skill too heavily, so agents could look better on aggregate while still neglecting the weakest bigram — exactly the behavior we want to *avoid* for comprehensive typing improvement.
+
+The revised reward function addresses this by:
+
+1. **Explicit weakest-skill penalty:** The $\min_b k_b$ term forces the agent to care about stragglers, not just the mean.
+2. **Logging all components:** Every reward component is logged directly from the environment, making it easy to spot when one term dominates.
+3. **Visual comparisons:** Before/after GIFs show whether changes actually improve weak bigrams or just inflate average skill.
+
+This iterative approach ensures reward improvements are **auditable and measurable** — future reward revisions will follow the same pattern: tune weights, visualize results, and update this README.
 
 ---
 
