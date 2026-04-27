@@ -124,6 +124,7 @@ class DQNAgent:
     def train(self, episodes=100, steps_per_episode=200):
         all_rewards = []
         all_skills = []
+        best_skill = -np.inf
         
         for ep in range(episodes):
             state = self.env.reset()
@@ -150,8 +151,22 @@ class DQNAgent:
             
             all_rewards.append(avg_reward)
             all_skills.append(final_skill)
+            # ---- Save BEST model ----
+            if final_skill > best_skill:
+                best_skill = final_skill
+                self.save_model("models/dqn_model_best.pth")
+            
             print(f"Ep {ep+1} | Reward: {avg_reward:.4f} | Skill: {final_skill:.4f} | Eps: {self.epsilon:.3f}")
+        # Save final model
+        self.save_model("models/dqn_model_final.pth")
         return all_rewards, all_skills
+    
+    def save_model(self, path="models/dqn_model.pth"):
+        torch.save(self.q_net.state_dict(), path)
+
+    def load_model(self, path="models/dqn_model.pth"):
+        self.q_net.load_state_dict(torch.load(path, map_location=self.device))
+        self.q_net.eval()
 
 import matplotlib.pyplot as plt
 

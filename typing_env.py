@@ -21,7 +21,7 @@ class TypingEnv:
         self.alpha = 0.08      # learning rate
         
         # lmbda changed from 0.004 --> 0.001 as forgetting parameter was strong!
-        self.lmbda = 0.002    # forgetting rate
+        self.lmbda = 0.003    # forgetting rate
         self.eta = 0.5
         
         # skill vector

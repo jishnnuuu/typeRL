@@ -83,3 +83,72 @@ def animate_episode(logs, bigrams, delay=1):
         plt.pause(delay)
         
     plt.show()
+    
+    
+
+def animate_with_metrics(logs, bigrams, delay=0.3):
+    import matplotlib.pyplot as plt
+    import numpy as np
+
+    plt.figure(figsize=(14, 8))
+
+    avg_history = []
+    min_history = []
+
+    for step, log in enumerate(logs):
+        plt.clf()
+
+        k = log["new_k"]
+        delta = log["delta_k"]
+        target = log["bigram_id"]
+
+        avg_k = np.mean(k)
+        min_k = np.min(k)
+
+        avg_history.append(avg_k)
+        min_history.append(min_k)
+
+        x = np.arange(len(bigrams))
+
+        # ---- Colors ----
+        colors = []
+        for i in range(len(k)):
+            if i == target:
+                colors.append("blue")
+            elif delta[i] > 0:
+                colors.append("green")
+            else:
+                colors.append("red")
+
+        # =======================
+        # Plot 1: Bar plot
+        # =======================
+        plt.subplot(2, 1, 1)
+        plt.bar(x, k, color=colors)
+
+        plt.xticks(x, bigrams, rotation=90, fontsize=6)
+        plt.ylim(0, 1)
+
+        plt.title(
+            f"Step {log['step']} | Target: {log['bigram']} | "
+            f"Avg: {avg_k:.3f} | Min: {min_k:.3f}"
+        )
+
+        plt.ylabel("Skill")
+
+        # =======================
+        # Plot 2: Metrics over time
+        # =======================
+        plt.subplot(2, 1, 2)
+        plt.plot(avg_history, label="Average Skill")
+        plt.plot(min_history, label="Minimum Skill")
+
+        plt.xlabel("Step")
+        plt.ylabel("Value")
+        plt.legend()
+        plt.grid(alpha=0.3)
+
+        plt.tight_layout()
+        plt.pause(delay)
+
+    plt.show()

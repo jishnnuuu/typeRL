@@ -172,6 +172,24 @@ where $\theta^-$ denotes the target network parameters.
 
 ![Agent Comparison](figs/compare_agents.png)
 
+## Demo
+
+This animation is the quickest way to inspect whether a reward change is helping the weakest bigrams or just inflating the average.
+
+![Multi-agent comparison animation](figs/compare_visuals.gif)
+
+## Reward Debug Log
+
+I ran into a reward-shaping problem during development: an early version of the environment rewarded average skill too heavily, so the agents could look better on aggregate while still neglecting the weakest bigram.
+
+The current version makes that issue visible and easier to debug by logging the reward components directly from the environment and by keeping the weakest-skill term in the reward. That gives me a clear before/after baseline for future reward improvements.
+
+Planned follow-up work:
+
+1. Compare the current reward against the next reward revision using the same visualization.
+2. Tune the reward weights and confirm the weakest bigram improves, not just the mean.
+3. Keep the README updated with each reward iteration so the project history stays auditable.
+
 ---
 
 ## Project Structure

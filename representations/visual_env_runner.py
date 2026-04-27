@@ -21,7 +21,8 @@ import numpy as np
 from typing_env import TypingEnv
 from text_processing import count_tracked_bigrams, counts_to_vector
 
-from visualizer import plot_step, animate_episode
+from visualizer import plot_step, animate_episode, animate_with_metrics
+np.random.seed(42)
 
 # rule-based agent action selection
 def select_rule_action(env):
@@ -101,6 +102,7 @@ def run_episode(steps=20):
         
         log["step"] = step
         log["avg_skill"] = np.mean(log["new_k"])
+        log["min_skill"] = np.min(log["new_k"])
         
         logs.append(log)
         
@@ -108,7 +110,7 @@ def run_episode(steps=20):
         print(f"Step {step}")
         print(f"  Target Bigram : {log['bigram']}")
         print(f"  Difficulty    : {log['difficulty']}")
-        print(f"  Sentence      : {log['sentence'][:60]}...")
+        print(f"  Sentence      : {log['sentence']}...")
         
         # Show only active bigrams
         active = np.where(log["counts"] > 0)[0]
@@ -130,9 +132,12 @@ def run_episode(steps=20):
 
 # run script
 if __name__ == "__main__":
-    logs = run_episode(steps=10)
+    np.random.seed(42)
+    logs = run_episode(steps=40)
     
     # # visualize final step
     # plot_step(logs[-1], bigrams=TypingEnv().bigrams)
     
-    animate_episode(logs, bigrams=TypingEnv().bigrams, delay=1)
+    animate_with_metrics(logs, 
+                        bigrams=TypingEnv().bigrams,
+                        delay=0.2)
