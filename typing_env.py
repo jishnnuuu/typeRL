@@ -28,11 +28,11 @@ class TypingEnv:
 
         # reward weights exposed for experimentation and reporting
         default_weights = {
-            "delta_skill": 2.0,
-            "accuracy": 1.0,
-            "weak_avg": 3.0,
-            "timer_penalty": 1.0,
-            "std_penalty": 0.5,
+            "delta_skill": 4.33,
+            "accuracy": 0.04,
+            "weak_avg": 1.25,
+            "timer_penalty": 0.6,
+            "std_penalty": 0.4,
         }
 
         self.reward_weights = reward_weights if reward_weights else default_weights
