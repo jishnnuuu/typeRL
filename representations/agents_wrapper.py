@@ -73,7 +73,6 @@ class DQNWrapper:
         return q_values.argmax().item()
 
 
-import torch
 from agents.reinforce import PolicyNetwork
 
 class ReinforceWrapper:
@@ -97,3 +96,29 @@ class ReinforceWrapper:
         action = torch.argmax(probs).item()   # deterministic for visualization
         
         return action
+    
+
+import torch
+from agents.actor_critic import ActorCriticNetwork
+
+
+class ActorCriticWrapper:
+    def __init__(self):
+        self.env = TypingEnv()
+
+        self.state_dim = len(self.env.get_state())
+        self.action_dim = self.env.K * self.env.L
+
+        self.model = ActorCriticNetwork(self.state_dim, self.action_dim)
+        self.model.load_state_dict(torch.load("models/actor_critic.pth"))
+        self.model.eval()
+
+    def get_action(self, env):
+        state = env.get_state()
+        state_tensor = torch.FloatTensor(state).unsqueeze(0)
+
+        with torch.no_grad():
+            probs, _ = self.model(state_tensor)
+
+        # deterministic for visualization
+        return torch.argmax(probs).item()

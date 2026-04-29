@@ -12,7 +12,7 @@ import numpy as np
 
 from typing_env import TypingEnv
 from visual_env_runner import step_with_logging
-from agents_wrapper import rule_action, QAgentWrapper, DQNWrapper, ReinforceWrapper
+from agents_wrapper import rule_action, QAgentWrapper, DQNWrapper, ReinforceWrapper, ActorCriticWrapper
 
 
 # def _render_frame(fig, axes, logs, avg_hist, min_hist, bigrams, titles, frame_idx):
@@ -118,15 +118,18 @@ def run_multi_agent(steps=20, save_path=None, show=True, fps=4):
     env_q = TypingEnv()
     env_dqn = TypingEnv()
     env_reinforce = TypingEnv()
+    env_actor_critic = TypingEnv()
 
     env_rule.reset()
     env_q.reset()
     env_dqn.reset()
     env_reinforce.reset()
+    env_actor_critic.reset()
 
     q_agent = QAgentWrapper()
     dqn_agent = DQNWrapper()
     reinforce_agent = ReinforceWrapper()
+    actor_critic_agent = ActorCriticWrapper()
 
     bigrams = env_rule.bigrams
 
@@ -135,7 +138,7 @@ def run_multi_agent(steps=20, save_path=None, show=True, fps=4):
     # min_hist = [[], [], []]
     step_logs = []
 
-    titles = ["Rule-Based", "Q-Learning", "DQN", "REINFORCE"]
+    titles = ["Rule-Based", "Q-Learning", "DQN", "REINFORCE", "Actor-Critic"]
 
     for step in range(steps):
         # -------- RUN STEP --------
@@ -157,6 +160,10 @@ def run_multi_agent(steps=20, save_path=None, show=True, fps=4):
         a_rf = reinforce_agent.get_action(env_reinforce)
         logs.append(step_with_logging(env_reinforce, a_rf))
 
+        # Actor-Critic
+        a_ac = actor_critic_agent.get_action(env_actor_critic)
+        logs.append(step_with_logging(env_actor_critic, a_ac))
+
         # -------- UPDATE METRICS --------
         # for i, log in enumerate(logs):
         #     k = log["new_k"]
@@ -165,7 +172,7 @@ def run_multi_agent(steps=20, save_path=None, show=True, fps=4):
 
         step_logs.append(logs)
 
-    fig, axes = plt.subplots(1, 4, figsize=(18, 4))
+    fig, axes = plt.subplots(1, 5, figsize=(22, 4))
 
     def update(frame_idx):
         # _render_frame(fig, axes, step_logs[frame_idx], avg_hist, min_hist, bigrams, titles, frame_idx)
