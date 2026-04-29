@@ -20,7 +20,7 @@ class TypingEnv:
         # learning parameters
         self.alpha = 0.08      # learning rate
         
-        self.lmbda = 0.003    # forgetting rate
+        self.lmbda = 0.005    # forgetting rate
         self.eta = 0.5
         
         self.max_steps = 600
