@@ -1,5 +1,11 @@
 # representations/agents_wrapper.py
 
+import os
+import sys
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from typing_env import TypingEnv
+
 import numpy as np
 import torch
 
@@ -65,3 +71,29 @@ class DQNWrapper:
             q_values = self.model(state_tensor)
         
         return q_values.argmax().item()
+
+
+import torch
+from agents.reinforce import PolicyNetwork
+
+class ReinforceWrapper:
+    def __init__(self):
+        self.env = TypingEnv()
+        
+        self.state_dim = len(self.env.get_state())
+        self.action_dim = self.env.K * self.env.L
+        
+        self.policy = PolicyNetwork(self.state_dim, self.action_dim)
+        self.policy.load_state_dict(torch.load("models/reinforce.pth"))
+        self.policy.eval()
+
+    def get_action(self, env):
+        state = env.get_state()
+        state_tensor = torch.FloatTensor(state).unsqueeze(0)
+        
+        with torch.no_grad():
+            probs = self.policy(state_tensor)
+        
+        action = torch.argmax(probs).item()   # deterministic for visualization
+        
+        return action
