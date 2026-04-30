@@ -6,6 +6,11 @@ RULE BASED AGENT
 3. Train that bigram
 """
 
+import os
+import sys
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -83,5 +88,5 @@ def plot_results(rewards, skills, tracked):
     plt.show()
     
 if __name__ == "__main__":
-    rewards, skills, tracked = run_rule_agent()
+    rewards, skills, tracked = run_rule_agent(500,500)
     plot_results(rewards, skills, tracked)

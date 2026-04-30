@@ -216,7 +216,7 @@ if __name__ == "__main__":
     agent = DQNAgent()
     
     # Run the training (this uses your existing train method)
-    rewards, skills, min_skills, std_skills = agent.train(episodes=300, steps_per_episode=500)
+    rewards, skills, min_skills, std_skills = agent.train(episodes=500, steps_per_episode=500)
     
     # Generate the plots
     plot_dqn_results(rewards, skills)

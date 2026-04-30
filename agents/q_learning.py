@@ -123,7 +123,7 @@ if __name__ == "__main__":
     agent = QLearningAgent(n_bins=10, alpha=0.1, gamma=0.95)
     
     # Run training
-    rewards, skills, min_skills, std_skills = agent.train(episodes=300, steps_per_episode=500)
+    rewards, skills, min_skills, std_skills = agent.train(episodes=500, steps_per_episode=500)
     
     # Plotting
     plot_results(rewards, skills)

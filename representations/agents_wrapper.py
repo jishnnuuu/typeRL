@@ -122,3 +122,29 @@ class ActorCriticWrapper:
 
         # deterministic for visualization
         return torch.argmax(probs).item()
+
+
+
+from agents.ppo import PPONetwork
+class PPOWrapper:
+    def __init__(self):
+        self.env = TypingEnv()
+
+        self.state_dim = len(self.env.get_state())
+        self.action_dim = self.env.K * self.env.L
+
+        self.model = PPONetwork(self.state_dim, self.action_dim)
+        self.model.load_state_dict(torch.load("models/ppo_model.pth"))
+        self.model.eval()
+
+    def get_action(self, env):
+        state = env.get_state()
+        state_tensor = torch.FloatTensor(state).unsqueeze(0)
+
+        with torch.no_grad():
+            probs, _ = self.model(state_tensor)
+
+        # deterministic (important for visualization)
+        dist = torch.distributions.Categorical(probs)
+        return dist.sample().item()
+    

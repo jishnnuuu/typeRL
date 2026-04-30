@@ -38,7 +38,7 @@ class PolicyNetwork(nn.Module):
 class ReinforceAgent:
     def __init__(
         self,
-        lr=1e-3,
+        lr=1e-4,
         gamma=0.99
     ):
         self.env = TypingEnv()
@@ -76,6 +76,8 @@ class ReinforceAgent:
     def train(self, episodes=300):
         all_rewards = []
         all_skills = []
+        min_skills = []
+        std_skills = []
         
         for ep in range(episodes):
             state = self.env.reset()
@@ -85,7 +87,7 @@ class ReinforceAgent:
             
             done = False
             
-            while not done:
+            for i in range(self.env.max_steps):
                 action, log_prob = self.select_action(state)
                 
                 next_state, reward, done, _ = self.env.step(action)
@@ -103,9 +105,8 @@ class ReinforceAgent:
             returns = (returns - returns.mean()) / (returns.std() + 1e-8)
             
             # policy loss
-            loss = 0
-            for log_prob, G in zip(log_probs, returns):
-                loss += -log_prob * G
+            loss = torch.stack([-lp * G for lp, G in zip(log_probs, returns)]).mean()
+            
             
             # update
             self.optimizer.zero_grad()
@@ -114,15 +115,19 @@ class ReinforceAgent:
             
             avg_reward = np.mean(rewards)
             final_skill = np.mean(self.env.k)
-            
+            min_skill = np.min(self.env.k)
+            std_skill = np.std(self.env.k)
+
             all_rewards.append(avg_reward)
             all_skills.append(final_skill)
-            
+            min_skills.append(min_skill)
+            std_skills.append(std_skill)
+
             if (ep + 1) % 10 == 0:
                 print(f"Episode {ep+1} | Reward: {avg_reward:.4f} | Skill: {final_skill:.4f}")
         
-        return all_rewards, all_skills
-    
+        return all_rewards, all_skills, min_skills, std_skills
+
     def save(self, path="models/reinforce.pth"):
         torch.save(self.policy.state_dict(), path)
 
@@ -148,6 +153,6 @@ def plot_results(rewards, skills):
 
 if __name__ == "__main__":
     agent = ReinforceAgent()
-    rewards, skills = agent.train(episodes=300)
+    rewards, skills, min_skills, std_skills = agent.train(episodes=500)
     agent.save()
     plot_results(rewards, skills)

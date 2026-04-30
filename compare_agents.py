@@ -5,6 +5,16 @@ from typing_env import TypingEnv
 from agents.q_learning import QLearningAgent
 from agents.dqn_agent import DQNAgent
 
+from agents.reinforce import ReinforceAgent
+from agents.actor_critic import ActorCriticAgent
+from agents.ppo import PPOAgent
+
+import random
+import torch
+
+np.random.seed(42)
+random.seed(42)
+torch.manual_seed(42)
 
 # -------------------------------
 # Rule-based agent
@@ -60,63 +70,107 @@ def run_rule(env, episodes=300, steps=300):
 # Main comparison
 # -------------------------------
 def compare():
+    results = []
+    labels = []
+
+    # ---- Rule ----
     print("Running Rule...")
     env_rule = TypingEnv()
-    r_rb, avg_rb, min_rb, std_rb = run_rule(env_rule)
+    res = run_rule(env_rule)
+    results.append(res)
+    labels.append("Rule")
 
+    # ---- Q-Learning ----
     print("Running Q-learning...")
     q_agent = QLearningAgent()
-    r_q, avg_q, min_q, std_q = q_agent.train(episodes=300)
+    res = q_agent.train(episodes=300)
+    results.append(res)
+    labels.append("Q-Learning")
 
+    # ---- DQN ----
     print("Running DQN...")
     dqn_agent = DQNAgent()
-    r_dqn, avg_dqn, min_dqn, std_dqn = dqn_agent.train(episodes=300)
+    res = dqn_agent.train(episodes=300)
+    results.append(res)
+    labels.append("DQN")
 
-    return (
-        (r_rb, avg_rb, min_rb, std_rb),
-        (r_q, avg_q, min_q, std_q),
-        (r_dqn, avg_dqn, min_dqn, std_dqn),
-    )
+    # ---- REINFORCE ----
+    print("Running REINFORCE...")
+    rf_agent = ReinforceAgent()
+    res = rf_agent.train(episodes=300)
+    results.append(res)
+    labels.append("REINFORCE")
+
+    # ---- Actor-Critic ----
+    print("Running Actor-Critic...")
+    ac_agent = ActorCriticAgent()
+    res = ac_agent.train(episodes=300)
+    results.append(res)
+    labels.append("Actor-Critic")
+
+    # ---- PPO ----
+    print("Running PPO...")
+    ppo_env = TypingEnv()
+    ppo_agent = PPOAgent(ppo_env)
+    res = ppo_agent.train(episodes=300)
+    results.append(res)
+    labels.append("PPO")
+
+    return results, labels
+
+def smooth(x, window=10):
+    if len(x) < window:
+        return x
+    return np.convolve(x, np.ones(window)/window, mode='same')
+
+
+def print_summary(results, labels):
+    print("\n===== FINAL METRICS =====")
+    for (r, avg, min_s, std_s), label in zip(results, labels):
+        print(f"{label}:")
+        print(f"  Final Avg Skill: {avg[-1]:.4f}")
+        print(f"  Final Min Skill: {min_s[-1]:.4f}")
+        print(f"  Final Std Dev  : {std_s[-1]:.4f}")
+        print("-" * 40)
+
 
 
 # -------------------------------
 # Plotting
 # -------------------------------
-def plot_all(results):
-    labels = ["Rule", "Q-Learning", "DQN"]
-
-    plt.figure(figsize=(15, 8))
+def plot_all(results, labels):
+    plt.figure(figsize=(16, 10))
 
     # ---- Reward ----
     plt.subplot(2, 2, 1)
     for (r, _, _, _), label in zip(results, labels):
-        plt.plot(r, label=label)
+        plt.plot(smooth(r), label=label)
     plt.title("Reward")
     plt.legend()
 
-    # ---- Average Skill ----
+    # ---- Avg Skill ----
     plt.subplot(2, 2, 2)
     for (_, avg, _, _), label in zip(results, labels):
-        plt.plot(avg, label=label)
+        plt.plot(smooth(avg), label=label)
     plt.title("Average Skill")
     plt.legend()
 
-    # ---- Minimum Skill ----
+    # ---- Min Skill ----
     plt.subplot(2, 2, 3)
     for (_, _, min_s, _), label in zip(results, labels):
-        plt.plot(min_s, label=label)
+        plt.plot(smooth(min_s), label=label)
     plt.title("Minimum Skill (Weakest Bigram)")
     plt.legend()
 
-    # ---- Variance ----
+    # ---- Std ----
     plt.subplot(2, 2, 4)
     for (_, _, _, std_s), label in zip(results, labels):
-        plt.plot(std_s, label=label)
-    plt.title("Skill Variance")
+        plt.plot(smooth(std_s), label=label)
+    plt.title("Skill Std Deviation")
     plt.legend()
 
     plt.tight_layout()
-    plt.savefig("figs/compare_agents_detailed.png")
+    plt.savefig("figs/compare_all_agents.png")
     plt.show()
 
 
@@ -124,5 +178,6 @@ def plot_all(results):
 # Run
 # -------------------------------
 if __name__ == "__main__":
-    results = compare()
-    plot_all(results)
+    results, labels = compare()
+    print_summary(results, labels)
+    plot_all(results, labels)

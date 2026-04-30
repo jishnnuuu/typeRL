@@ -75,6 +75,8 @@ class ActorCriticAgent:
     def train(self, episodes=300):
         all_rewards = []
         all_skills = []
+        min_skills = []
+        std_skills = []
 
         for ep in range(episodes):
             state = self.env.reset()
@@ -118,13 +120,19 @@ class ActorCriticAgent:
             # Logging
             avg_reward = np.mean(episode_rewards)
             final_skill = np.mean(self.env.k)
+            min_skill = np.min(self.env.k)
+            std_skill = np.std(self.env.k)
+            
+            
             all_rewards.append(avg_reward)
             all_skills.append(final_skill)
+            min_skills.append(min_skill)
+            std_skills.append(std_skill)
 
             if (ep + 1) % 10 == 0:
                 print(f"Ep {ep+1:3d} | Avg Reward: {avg_reward:7.4f} | Avg Skill: {final_skill:.4f}")
 
-        return all_rewards, all_skills
+        return all_rewards, all_skills, min_skills, std_skills
 
     def save(self, path="models/actor_critic.pth"):
         os.makedirs(os.path.dirname(path), exist_ok=True)
@@ -156,7 +164,7 @@ def plot_results(rewards, skills):
     plt.show()
 
 if __name__ == "__main__":
-    agent = ActorCriticAgent(lr=5e-4) # Balanced LR
-    rewards, skills = agent.train(episodes=300)
+    agent = ActorCriticAgent(lr=1e-4)
+    rewards, skills, min_skills, std_skills = agent.train(episodes=500)
     plot_results(rewards, skills)
     agent.save()
