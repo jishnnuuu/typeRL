@@ -25,6 +25,8 @@ class TypingEnv:
         
         self.max_steps = 600
         self.current_step = 0
+        
+        self.forgetting_type = "log"   # default
 
         # reward weights exposed for experimentation and reporting
         default_weights = {
@@ -116,7 +118,12 @@ class TypingEnv:
             Before: linear growth → too harsh
             Now: logarithmic → controlled forgetting
             """
-            forget = self.lmbda * (1 - self.k[b]) * np.log(1 + self.t[b])
+            if self.forgetting_type == "log":
+                forget = self.lmbda * (1 - self.k[b]) * np.log(1 + self.t[b])
+            elif self.forgetting_type == "linear":
+                forget = self.lmbda * (1 - self.k[b]) * self.t[b]
+            else:
+                raise ValueError("Unknown forgetting type")
             if c > 0:
                 learn = self.alpha * acc[b] * np.log(1 + c) * (1 - self.k[b])
                 self.k[b] += learn - forget

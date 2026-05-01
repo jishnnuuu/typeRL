@@ -44,7 +44,7 @@ def run_rule_agent(episodes=30, steps_per_episode=100):
     all_rewards = []
     all_skills = []
     
-    tracked_bigram = 0
+    tracked_bigram = 11
     tracked_skill = []
     
     for ep in range(episodes):
@@ -71,17 +71,13 @@ def run_rule_agent(episodes=30, steps_per_episode=100):
 def plot_results(rewards, skills, tracked):
     plt.figure(figsize=(12,4))
     
-    plt.subplot(1,3,1)
+    plt.subplot(1,2,1)
     plt.plot(rewards)
-    plt.title("Reward")
+    plt.title("Average Reward")
     
-    plt.subplot(1,3,2)
+    plt.subplot(1,2,2)
     plt.plot(skills)
     plt.title("Final Skill")
-    
-    plt.subplot(1,3,3)
-    plt.plot(tracked)
-    plt.title("Tracked Bigram")
     
     plt.tight_layout()
     plt.savefig("figs/rule_based_agent.png")
